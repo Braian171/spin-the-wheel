@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin The Wheel with Confetti</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        #wheel {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            position: relative;
+            margin: 20px auto;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        #spinner {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #333;
+            z-index: 1;
+        }
+
+        .input-section {
+            margin: 20px;
+        }
+
+        #itemInput {
+            padding: 8px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        #itemList {
+            margin: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            padding: 5px;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        .item-row input[type="color"] {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .color-preview {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+        }
+
+        /* Confetti Animation */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f0f;
+            position: absolute;
+            top: -10px;
+            z-index: 999;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="spinner"></div>
+        <canvas id="wheel"></canvas>
+        <div class="input-section">
+            <input type="text" id="itemInput" placeholder="Add item (name/emoji/number)">
+            <input type="color" id="colorInput" value="#FF6B6B">
+            <button onclick="addItem()">Add Item</button>
+            <button onclick="spinWheel()">Spin!</button>
+            <button onclick="clearItems()">Clear All</button>
+        </div>
+        <div id="itemList"></div>
+    </div>
+
+    <script>
+        const items = [];
+        const itemColors = [];
+        let currentRotation = 0;
+        
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 400;
+        canvas.height = 400;
+        
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (items.length === 0) {
+                ctx.beginPath();
+                ctx.arc(200, 200, 200, 0, Math.PI * 2);
+                ctx.fillStyle = '#ccc';
+                ctx.fill();
+                ctx.font = '20px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Add items to spin!', 200, 200);
+                return;
+            }
+            
+            const sliceAngle = (Math.PI * 2) / items.length;
+            
+            for (let i = 0; i < items.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(200, 200);
+                ctx.arc(200, 200, 200, i * sliceAngle, (i + 1) * sliceAngle);
+                ctx.closePath();
+                ctx.fillStyle = itemColors[i];
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(200, 200);
+                ctx.rotate(i * sliceAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.fillText(items[i], 180, 0);
+                ctx.restore();
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}deg, 100%, 50%)`;
+                confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear`;
+                document.body.appendChild(confetti);
+
+                confetti.addEventListener('animationend', () => {
+                    confetti.remove();
+                });
+            }
+        }
+        
+        function addItem() {
+            const input = document.getElementById('itemInput');
+            const colorInput = document.getElementById('colorInput');
+            const item = input.value.trim();
+            
+            if (item && items.length < 100) {
+                items.push(item);
+                itemColors.push(colorInput.value);
+                input.value = '';
+                drawWheel();
+                updateItemList();
+            }
+        }
+        
+        function updateItemList() {
+            const list = document.getElementById('itemList');
+            list.innerHTML = '<h3>Items:</h3>';
+            
+            items.forEach((item, index) => {
+                const itemRow = document.createElement('div');
+                itemRow.className = 'item-row';
+                
+                itemRow.innerHTML = `
+                    <span>${item}</span>
+                    <input type="color" value="${itemColors[index]}" 
+                           onchange="updateColor(${index}, this.value)">
+                    <div class="color-preview" style="background-color: ${itemColors[index]}"></div>
+                    <button onclick="removeItem(${index})">Remove</button>
+                `;
+                
+                list.appendChild(itemRow);
+            });
+        }
+        
+        function updateColor(index, color) {
+            itemColors[index] = color;
+            drawWheel();
+            updateItemList();
+        }
+        
+        function removeItem(index) {
+            items.splice(index, 1);
+            itemColors.splice(index, 1);
+            drawWheel();
+            updateItemList();
+        }
+        
+        function clearItems() {
+            items.length = 0;
+            itemColors.length = 0;
+            drawWheel();
+            updateItemList();
+        }
+        
+        let isSpinning = false;
+        
+        function spinWheel() {
+            if (isSpinning || items.length === 0) return;
+            
+            isSpinning = true;
+            const wheel = document.getElementById('wheel');
+            const spins = 5 + Math.random() * 5;
+            const duration = 4000;
+            const totalRotation = (spins * 360) + Math.random() * 360;
+            currentRotation += totalRotation;
+            
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            
+            setTimeout(() => {
+                isSpinning = false;
+                createConfetti();
+            }, duration);
+        }
+        
+        // Initialize wheel
+        drawWheel();
+        
+        // Add keyboard support
+        document.getElementById('itemInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addItem();
+            }
+        });
+    </script>
+</body>
+</html>
